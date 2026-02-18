@@ -17,6 +17,10 @@ const config: ForgeConfig = {
     asar: true,
     name: 'Nexus',
     executableName: 'Nexus',
+    extraResource: [
+      './server/agents.yml',
+      './server/.env',
+    ],
   },
   rebuildConfig: {},
   makers: [

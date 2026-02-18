@@ -2,7 +2,7 @@ import { app, BrowserWindow, session, shell } from 'electron';
 import path from 'path';
 import { initDb } from './store/db';
 import { registerIpcHandlers } from './ipc-handlers';
-import { startExpressServer } from './server-launcher';
+import { startExpressServer, stopExpressServer } from './server-launcher';
 import { mcpManager } from './mcp/mcp-manager';
 
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
@@ -106,6 +106,7 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', async () => {
+  stopExpressServer();
   await mcpManager.shutdown();
 });
 
