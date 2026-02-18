@@ -20,6 +20,9 @@ export const mainConfig: Configuration = {
   externals: {
     '@modelcontextprotocol/sdk/client/index.js': 'commonjs2 @modelcontextprotocol/sdk/client/index.js',
     '@modelcontextprotocol/sdk/client/stdio.js': 'commonjs2 @modelcontextprotocol/sdk/client/stdio.js',
+    '@modelcontextprotocol/sdk/client/streamableHttp.js': 'commonjs2 @modelcontextprotocol/sdk/client/streamableHttp.js',
+    '@modelcontextprotocol/sdk/client/sse.js': 'commonjs2 @modelcontextprotocol/sdk/client/sse.js',
+    '@modelcontextprotocol/sdk/client/auth-extensions.js': 'commonjs2 @modelcontextprotocol/sdk/client/auth-extensions.js',
     'express': 'commonjs2 express',
     'cors': 'commonjs2 cors',
     'passport': 'commonjs2 passport',
