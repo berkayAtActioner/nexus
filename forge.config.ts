@@ -1,6 +1,7 @@
 import type { ForgeConfig } from '@electron-forge/shared-types';
 import { MakerSquirrel } from '@electron-forge/maker-squirrel';
 import { MakerZIP } from '@electron-forge/maker-zip';
+import { MakerDMG } from '@electron-forge/maker-dmg';
 import { MakerDeb } from '@electron-forge/maker-deb';
 import { MakerRpm } from '@electron-forge/maker-rpm';
 import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives';
@@ -14,13 +15,34 @@ import { rendererConfig } from './webpack.renderer.config';
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
+    name: 'Nexus',
+    executableName: 'Nexus',
   },
   rebuildConfig: {},
   makers: [
-    new MakerSquirrel({}),
+    new MakerDMG({
+      format: 'ULFO',
+    }),
     new MakerZIP({}, ['darwin']),
-    new MakerRpm({}),
-    new MakerDeb({}),
+    new MakerSquirrel({
+      name: 'Nexus',
+      setupExe: 'NexusSetup.exe',
+    }),
+    new MakerDeb({
+      options: {
+        name: 'nexus',
+        productName: 'Nexus',
+        maintainer: 'berkayAtActioner',
+        homepage: 'https://github.com/berkayAtActioner/nexus',
+      },
+    }),
+    new MakerRpm({
+      options: {
+        name: 'nexus',
+        productName: 'Nexus',
+        homepage: 'https://github.com/berkayAtActioner/nexus',
+      },
+    }),
   ],
   plugins: [
     new AutoUnpackNativesPlugin({}),
@@ -48,8 +70,8 @@ const config: ForgeConfig = {
       [FuseV1Options.EnableCookieEncryption]: true,
       [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
       [FuseV1Options.EnableNodeCliInspectArguments]: false,
-      [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
-      [FuseV1Options.OnlyLoadAppFromAsar]: true,
+      [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: false,
+      [FuseV1Options.OnlyLoadAppFromAsar]: false,
     }),
   ],
 };
