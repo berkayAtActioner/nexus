@@ -14,10 +14,20 @@ import { app as electronApp } from 'electron';
 
 // ── Config ──────────────────────────────────────────────────────────────────
 
-const JWT_SECRET = process.env.JWT_SECRET || 'nexus-dev-jwt-secret-change-in-production';
-const STREAM_API_KEY = process.env.STREAM_API_KEY || '';
-const STREAM_API_SECRET = process.env.STREAM_API_SECRET || '';
-const PORT = parseInt(process.env.PORT || '3001', 10);
+const DEFAULT_JWT_SECRET = 'nexus-dev-jwt-secret-change-in-production';
+
+function getJwtSecret(): string {
+  return process.env.JWT_SECRET || DEFAULT_JWT_SECRET;
+}
+function getStreamApiKey(): string {
+  return process.env.STREAM_API_KEY || '';
+}
+function getStreamApiSecret(): string {
+  return process.env.STREAM_API_SECRET || '';
+}
+function getPort(): number {
+  return parseInt(process.env.PORT || '3001', 10);
+}
 
 // ── Server DB ───────────────────────────────────────────────────────────────
 
@@ -80,11 +90,11 @@ function getAllUsers(): ServerUser[] {
 // ── JWT helpers ─────────────────────────────────────────────────────────────
 
 function generateJwt(userId: string): string {
-  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: '7d' });
+  return jwt.sign({ userId }, getJwtSecret(), { expiresIn: '7d' });
 }
 
 function generateRefreshToken(userId: string): string {
-  return jwt.sign({ userId, type: 'refresh' }, JWT_SECRET, { expiresIn: '30d' });
+  return jwt.sign({ userId, type: 'refresh' }, getJwtSecret(), { expiresIn: '30d' });
 }
 
 // ── Stream Chat ─────────────────────────────────────────────────────────────
@@ -92,14 +102,15 @@ function generateRefreshToken(userId: string): string {
 let streamClient: StreamChat | null = null;
 
 function isStreamConfigured(): boolean {
-  return !!(STREAM_API_KEY && STREAM_API_SECRET &&
-    STREAM_API_KEY !== 'your-stream-api-key' && STREAM_API_SECRET !== 'your-stream-api-secret');
+  const key = getStreamApiKey();
+  const secret = getStreamApiSecret();
+  return !!(key && secret && key !== 'your-stream-api-key' && secret !== 'your-stream-api-secret');
 }
 
 function getStreamClient(): StreamChat {
   if (!streamClient) {
     if (!isStreamConfigured()) throw new Error('Stream not configured');
-    streamClient = StreamChat.getInstance(STREAM_API_KEY, STREAM_API_SECRET);
+    streamClient = StreamChat.getInstance(getStreamApiKey(), getStreamApiSecret());
   }
   return streamClient;
 }
@@ -161,7 +172,7 @@ function authMiddleware(req: any, res: any, next: any): void {
     return;
   }
   try {
-    const decoded = jwt.verify(authHeader.slice(7), JWT_SECRET) as { userId: string };
+    const decoded = jwt.verify(authHeader.slice(7), getJwtSecret()) as { userId: string };
     const user = findUserById(decoded.userId);
     if (!user) { res.status(401).json({ error: 'User not found' }); return; }
     req.user = user;
@@ -222,11 +233,6 @@ export function startEmbeddedServer(): void {
       }
     } catch { /* try next */ }
   }
-
-  // Re-read env after loading .env
-  const jwtSecret = process.env.JWT_SECRET || JWT_SECRET;
-  // Patch the module-level refs won't work for consts, so we use process.env directly in functions
-  // JWT_SECRET is used via the functions that read it at call time
 
   initServerDb();
 
@@ -314,7 +320,7 @@ export function startEmbeddedServer(): void {
     const { refreshToken } = req.body;
     if (!refreshToken) { res.status(400).json({ error: 'Refresh token required' }); return; }
     try {
-      const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET || JWT_SECRET) as { userId: string; type?: string };
+      const decoded = jwt.verify(refreshToken, getJwtSecret()) as { userId: string; type?: string };
       if (decoded.type !== 'refresh') { res.status(401).json({ error: 'Invalid refresh token' }); return; }
       const user = findUserById(decoded.userId);
       if (!user) { res.status(401).json({ error: 'User not found' }); return; }
@@ -381,13 +387,14 @@ export function startEmbeddedServer(): void {
 
   // ── Start ─────────────────────────────────────────────────────────────────
 
-  server = app.listen(PORT, () => {
-    console.log(`[Nexus Embedded Server] Running on http://localhost:${PORT}`);
+  const port = getPort();
+  server = app.listen(port, () => {
+    console.log(`[Nexus Embedded Server] Running on http://localhost:${port}`);
   });
 
   server.on('error', (err: any) => {
     if (err.code === 'EADDRINUSE') {
-      console.log(`[Nexus Embedded Server] Port ${PORT} already in use — external server may be running`);
+      console.log(`[Nexus Embedded Server] Port ${port} already in use — external server may be running`);
     } else {
       console.error('[Nexus Embedded Server] Failed to start:', err);
     }
