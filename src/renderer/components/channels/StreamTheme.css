@@ -1,0 +1,105 @@
+/* Stream Chat React theme overrides for Nexus light theme */
+
+.str-chat {
+  --str-chat__primary-color: #6366f1;
+  --str-chat__active-primary-color: #4f46e5;
+  --str-chat__surface-color: #ffffff;
+  --str-chat__secondary-surface-color: #f8f8fa;
+  --str-chat__primary-surface-color: #ededf7;
+  --str-chat__primary-surface-color-low-emphasis: #f4f4f8;
+  --str-chat__border-radius-circle: 10px;
+  --str-chat__message-textarea-border-radius: 10px;
+  --str-chat__spacing-px: 1px;
+  font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+  font-size: 13.5px;
+  height: 100%;
+}
+
+.str-chat__channel {
+  height: 100%;
+}
+
+.str-chat__main-panel {
+  height: 100%;
+}
+
+.str-chat__message-list {
+  padding: 12px 16px;
+  background: #ffffff;
+}
+
+.str-chat__message-input {
+  border-top: 1px solid #e5e5ed;
+  background: #ffffff;
+  padding: 12px 16px;
+}
+
+.str-chat__message-input .str-chat__textarea textarea {
+  background: #f8f8fa;
+  border: 1px solid #e5e5ed;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13.5px;
+  color: #1a1a2e;
+}
+
+.str-chat__message-input .str-chat__textarea textarea:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+}
+
+.str-chat__message-simple {
+  padding: 4px 0;
+}
+
+.str-chat__message-text-inner {
+  background: #f8f8fa;
+  border: 1px solid #e5e5ed;
+  border-radius: 12px;
+  padding: 8px 14px;
+  color: #1a1a2e;
+  font-size: 13.5px;
+}
+
+.str-chat__message--me .str-chat__message-text-inner {
+  background: #ededf7;
+  border-color: #dddde8;
+}
+
+.str-chat__avatar {
+  border-radius: 10px;
+}
+
+.str-chat__header-livestream {
+  border-bottom: 1px solid #e5e5ed;
+  background: #fff;
+  padding: 12px 16px;
+}
+
+.str-chat__channel-list-messenger {
+  background: transparent;
+}
+
+.str-chat__date-separator-date {
+  color: #9999aa;
+  font-size: 12px;
+}
+
+/* Hide default channel header since we have our own */
+.str-chat__channel-header {
+  display: none;
+}
+
+/* Scrollbar styling */
+.str-chat__message-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.str-chat__message-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.str-chat__message-list::-webkit-scrollbar-thumb {
+  background: #e5e5ed;
+  border-radius: 3px;
+}

@@ -1,0 +1,9 @@
+servers:
+  - id: actioner-crm
+    name: Actioner CRM
+    icon: "⬢"
+    description: "Deals, contacts, pipeline, activities"
+    transport: stdio
+    command: "npx"
+    args: ["tsx", "mcp-servers/actioner-mock/src/index.ts"]
+    category: crm
