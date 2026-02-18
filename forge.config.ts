@@ -43,11 +43,12 @@ const config: ForgeConfig = {
       const projectRoot = process.cwd();
       const destNodeModules = path.join(buildPath, 'node_modules');
 
-      function copyModuleRecursive(moduleName: string, visited = new Set<string>()) {
+      const visited = new Set<string>();
+
+      function copyModuleAndDeps(moduleName: string) {
         if (visited.has(moduleName)) return;
         visited.add(moduleName);
 
-        // Handle scoped packages
         const modulePath = path.join(projectRoot, 'node_modules', moduleName);
         const destPath = path.join(destNodeModules, moduleName);
 
@@ -56,18 +57,35 @@ const config: ForgeConfig = {
           return;
         }
 
-        fs.cpSync(modulePath, destPath, { recursive: true });
+        if (!fs.existsSync(destPath)) {
+          fs.cpSync(modulePath, destPath, { recursive: true });
+        }
 
-        // Copy production dependencies of this module too
+        // Recursively copy production deps (hoisted to top-level)
         const pkgPath = path.join(modulePath, 'package.json');
         if (fs.existsSync(pkgPath)) {
           const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
-          const deps = Object.keys(pkg.dependencies || {});
-          for (const dep of deps) {
-            // Only copy if the dep exists at the top level (hoisted)
-            const depPath = path.join(projectRoot, 'node_modules', dep);
-            if (fs.existsSync(depPath) && !fs.existsSync(path.join(destNodeModules, dep))) {
-              copyModuleRecursive(dep, visited);
+          for (const dep of Object.keys(pkg.dependencies || {})) {
+            copyModuleAndDeps(dep);
+          }
+        }
+
+        // Also handle nested node_modules inside this package — their deps
+        // may reference hoisted packages that need to be at the top level
+        const nestedNM = path.join(modulePath, 'node_modules');
+        if (fs.existsSync(nestedNM)) {
+          for (const entry of fs.readdirSync(nestedNM)) {
+            const nestedPkgPath = entry.startsWith('@')
+              ? fs.readdirSync(path.join(nestedNM, entry)).map(sub => path.join(nestedNM, entry, sub))
+              : [path.join(nestedNM, entry)];
+            for (const npp of nestedPkgPath) {
+              const npkg = path.join(npp, 'package.json');
+              if (fs.existsSync(npkg)) {
+                const nested = JSON.parse(fs.readFileSync(npkg, 'utf-8'));
+                for (const dep of Object.keys(nested.dependencies || {})) {
+                  copyModuleAndDeps(dep);
+                }
+              }
             }
           }
         }
@@ -76,8 +94,9 @@ const config: ForgeConfig = {
       fs.mkdirSync(destNodeModules, { recursive: true });
       for (const mod of externalModules) {
         console.log(`Copying external module: ${mod}`);
-        copyModuleRecursive(mod);
+        copyModuleAndDeps(mod);
       }
+      console.log(`Copied ${visited.size} modules total`);
     },
   },
   makers: [
