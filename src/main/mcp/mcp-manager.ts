@@ -12,15 +12,21 @@ let ClientCredentialsProviderClass: any = null;
 async function ensureSdkLoaded() {
   if (!ClientClass) {
     const clientMod = await import('@modelcontextprotocol/sdk/client/index.js');
-    ClientClass = clientMod.Client;
+    ClientClass = clientMod.Client || (clientMod as any).default?.Client;
     const stdioMod = await import('@modelcontextprotocol/sdk/client/stdio.js');
-    StdioClientTransportClass = stdioMod.StdioClientTransport;
+    StdioClientTransportClass = stdioMod.StdioClientTransport || (stdioMod as any).default?.StdioClientTransport;
     const httpMod = await import('@modelcontextprotocol/sdk/client/streamableHttp.js');
-    StreamableHTTPClientTransportClass = httpMod.StreamableHTTPClientTransport;
+    StreamableHTTPClientTransportClass = httpMod.StreamableHTTPClientTransport || (httpMod as any).default?.StreamableHTTPClientTransport;
     const sseMod = await import('@modelcontextprotocol/sdk/client/sse.js');
-    SSEClientTransportClass = sseMod.SSEClientTransport;
+    SSEClientTransportClass = sseMod.SSEClientTransport || (sseMod as any).default?.SSEClientTransport;
     const authMod = await import('@modelcontextprotocol/sdk/client/auth-extensions.js');
-    ClientCredentialsProviderClass = authMod.ClientCredentialsProvider;
+    ClientCredentialsProviderClass = authMod.ClientCredentialsProvider || (authMod as any).default?.ClientCredentialsProvider;
+
+    console.log('[MCP SDK] Client:', typeof ClientClass);
+    console.log('[MCP SDK] StdioTransport:', typeof StdioClientTransportClass);
+    console.log('[MCP SDK] HTTPTransport:', typeof StreamableHTTPClientTransportClass);
+    console.log('[MCP SDK] SSETransport:', typeof SSEClientTransportClass);
+    console.log('[MCP SDK] CredentialsProvider:', typeof ClientCredentialsProviderClass);
   }
 }
 
@@ -134,6 +140,7 @@ class McpManager {
       console.log(`[MCP Manager] Connected to ${config.name} (${tools.length} tools)`);
     } catch (error: any) {
       console.error(`[MCP Manager] Failed to connect to ${serverId}:`, error.message);
+      console.error(`[MCP Manager] Stack:`, error.stack);
       this.connections.set(serverId, {
         client: null,
         transport: null,
