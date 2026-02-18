@@ -8,9 +8,24 @@ import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-nati
 import { WebpackPlugin } from '@electron-forge/plugin-webpack';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
+import fs from 'fs';
+import path from 'path';
 
 import { mainConfig } from './webpack.main.config';
 import { rendererConfig } from './webpack.renderer.config';
+
+// Modules externalized in webpack.main.config.ts that must be copied into the packaged app
+const externalModules = [
+  'better-sqlite3',
+  'express',
+  'cors',
+  'passport',
+  'passport-google-oauth20',
+  'passport-github2',
+  'jsonwebtoken',
+  'stream-chat',
+  '@modelcontextprotocol/sdk',
+];
 
 const config: ForgeConfig = {
   packagerConfig: {
@@ -23,6 +38,48 @@ const config: ForgeConfig = {
     ],
   },
   rebuildConfig: {},
+  hooks: {
+    packageAfterCopy: async (_config, buildPath) => {
+      const projectRoot = process.cwd();
+      const destNodeModules = path.join(buildPath, 'node_modules');
+
+      function copyModuleRecursive(moduleName: string, visited = new Set<string>()) {
+        if (visited.has(moduleName)) return;
+        visited.add(moduleName);
+
+        // Handle scoped packages
+        const modulePath = path.join(projectRoot, 'node_modules', moduleName);
+        const destPath = path.join(destNodeModules, moduleName);
+
+        if (!fs.existsSync(modulePath)) {
+          console.warn(`Module not found: ${moduleName}`);
+          return;
+        }
+
+        fs.cpSync(modulePath, destPath, { recursive: true });
+
+        // Copy production dependencies of this module too
+        const pkgPath = path.join(modulePath, 'package.json');
+        if (fs.existsSync(pkgPath)) {
+          const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+          const deps = Object.keys(pkg.dependencies || {});
+          for (const dep of deps) {
+            // Only copy if the dep exists at the top level (hoisted)
+            const depPath = path.join(projectRoot, 'node_modules', dep);
+            if (fs.existsSync(depPath) && !fs.existsSync(path.join(destNodeModules, dep))) {
+              copyModuleRecursive(dep, visited);
+            }
+          }
+        }
+      }
+
+      fs.mkdirSync(destNodeModules, { recursive: true });
+      for (const mod of externalModules) {
+        console.log(`Copying external module: ${mod}`);
+        copyModuleRecursive(mod);
+      }
+    },
+  },
   makers: [
     new MakerDMG({
       format: 'ULFO',
