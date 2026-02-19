@@ -253,25 +253,6 @@ export default function SettingsModal() {
                 {saving ? 'Saving...' : 'Save'}
               </button>
 
-              {/* Logout */}
-              <div style={{ marginTop: 32, paddingTop: 20, borderTop: '1px solid #e5e5ed' }}>
-                <label style={{ fontSize: 13, fontWeight: 500, color: '#6b6b80', display: 'block', marginBottom: 8 }}>
-                  Account
-                </label>
-                <button
-                  onClick={() => {
-                    useAuthStore.getState().logout();
-                    closeSettings();
-                  }}
-                  style={{
-                    padding: '8px 20px', borderRadius: 8, border: '1px solid #e5e5ed',
-                    background: '#fff', cursor: 'pointer',
-                    fontSize: 13, fontWeight: 500, color: '#ef4444', fontFamily: 'inherit',
-                  }}
-                >
-                  Log out
-                </button>
-              </div>
             </div>
           )}
 

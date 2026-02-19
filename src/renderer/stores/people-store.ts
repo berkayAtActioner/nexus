@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { WorkspaceUser } from '../../shared/types';
-import { apiFetch } from '../services/api-client';
+import { getStreamClient } from '../services/stream-client';
 
 interface PeopleState {
   users: WorkspaceUser[];
@@ -16,8 +16,29 @@ export const usePeopleStore = create<PeopleState>((set, get) => ({
   fetchUsers: async () => {
     set({ isLoading: true });
     try {
-      const data = await apiFetch<{ users: WorkspaceUser[] }>('/users');
-      set({ users: data.users, isLoading: false });
+      const client = getStreamClient();
+      if (!client?.userID) {
+        set({ isLoading: false });
+        return;
+      }
+
+      // Query all users from Stream Chat (the shared service)
+      const { users: streamUsers } = await client.queryUsers(
+        { id: { $ne: '' } } as any,
+        { last_active: -1 },
+        { limit: 100 }
+      );
+
+      const users: WorkspaceUser[] = streamUsers.map(u => ({
+        id: u.id,
+        email: (u as any).email || `${u.id}@nexus.app`,
+        name: u.name || u.id,
+        avatar_url: (u.image as string) || null,
+        provider: 'stream',
+        online: u.online,
+      }));
+
+      set({ users, isLoading: false });
     } catch (err) {
       console.error('Fetch users error:', err);
       set({ isLoading: false });

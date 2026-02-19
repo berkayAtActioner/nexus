@@ -1,4 +1,35 @@
+import { useState, useRef, useEffect } from 'react';
 import { useUIStore } from '../../stores/ui-store';
+import { useAuthStore } from '../../stores/auth-store';
+
+function UserInitials({ name, avatarUrl }: { name: string; avatarUrl?: string | null }) {
+  const initials = name
+    .split(' ')
+    .map(w => w[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
+  return (
+    <div
+      title={name}
+      style={{
+        width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+        background: avatarUrl ? 'transparent' : 'linear-gradient(135deg, #6366f1, #818cf8)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 13, fontWeight: 700, color: '#fff', overflow: 'hidden',
+        border: '2px solid #e5e5ed',
+      }}
+    >
+      {avatarUrl ? (
+        <img src={avatarUrl} style={{ width: 36, height: 36, borderRadius: 10, objectFit: 'cover' }} />
+      ) : (
+        initials || '?'
+      )}
+    </div>
+  );
+}
 
 export default function ActivityBar() {
   const sidebarSection = useUIStore(s => s.sidebarSection);
@@ -6,6 +37,7 @@ export default function ActivityBar() {
   const pinnedApps = useUIStore(s => s.pinnedApps);
   const setActiveView = useUIStore(s => s.setActiveView);
   const setSidebarSection = useUIStore(s => s.setSidebarSection);
+  const currentUser = useAuthStore(s => s.currentUser);
 
   const navItems = [
     { id: 'channels' as const, icon: '#', label: 'Channels', viewType: 'channel' },
@@ -84,6 +116,78 @@ export default function ActivityBar() {
             );
           })}
         </>
+      )}
+
+      {/* Spacer */}
+      <div style={{ flex: 1 }} />
+
+      {/* Current user with popover */}
+      {currentUser && (
+        <UserMenu currentUser={currentUser} />
+      )}
+    </div>
+  );
+}
+
+function UserMenu({ currentUser }: { currentUser: { name: string; email: string; avatar_url: string | null } }) {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  return (
+    <div ref={menuRef} style={{ position: 'relative', paddingBottom: 12 }}>
+      <button
+        onClick={() => setOpen(!open)}
+        style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+      >
+        <UserInitials name={currentUser.name} avatarUrl={currentUser.avatar_url} />
+      </button>
+
+      {open && (
+        <div style={{
+          position: 'absolute', bottom: 48, left: 0,
+          background: '#fff', borderRadius: 10, border: '1px solid #e5e5ed',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.1)', padding: '8px 0',
+          minWidth: 180, zIndex: 1000,
+        }}>
+          {/* User info */}
+          <div style={{ padding: '8px 14px 10px', borderBottom: '1px solid #e5e5ed' }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>
+              {currentUser.name}
+            </div>
+            <div style={{ fontSize: 11, color: '#9999aa', marginTop: 2 }}>
+              {currentUser.email}
+            </div>
+          </div>
+
+          {/* Logout */}
+          <button
+            onClick={() => {
+              setOpen(false);
+              useAuthStore.getState().logout();
+            }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+              padding: '8px 14px', background: 'none', border: 'none',
+              cursor: 'pointer', fontSize: 13, color: '#ef4444',
+              fontFamily: 'inherit', textAlign: 'left',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = '#fef2f2')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+          >
+            Log out
+          </button>
+        </div>
       )}
     </div>
   );

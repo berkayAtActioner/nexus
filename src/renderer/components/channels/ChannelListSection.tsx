@@ -76,12 +76,11 @@ export default function ChannelListSection() {
           }}>
             Browse public
           </div>
-          {publicChannels.map(channel => {
-            const data = channel.data as any;
-            const isJoining = joiningId === channel.id;
+          {publicChannels.map(ch => {
+            const isJoining = joiningId === ch.id;
             return (
               <div
-                key={channel.id}
+                key={ch.id}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 8, width: '100%',
                   padding: '6px 10px', borderRadius: 8, fontSize: 13.5, color: '#9999aa',
@@ -89,10 +88,10 @@ export default function ChannelListSection() {
               >
                 <span style={{ fontSize: 14, fontWeight: 700 }}>#</span>
                 <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {data?.name || channel.id}
+                  {ch.name}
                 </span>
                 <button
-                  onClick={() => handleJoin(channel.id!)}
+                  onClick={() => handleJoin(ch.id)}
                   disabled={isJoining}
                   style={{
                     padding: '3px 10px', borderRadius: 6, border: '1px solid #e5e5ed',

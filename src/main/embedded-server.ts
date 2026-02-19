@@ -359,19 +359,61 @@ export function startEmbeddedServer(): void {
     res.json({ user });
   });
 
-  // Channels
+  // Create channel (server-side with admin privileges)
   app.post('/api/channels', authMiddleware, async (req: any, res) => {
     if (!isStreamConfigured()) { res.status(503).json({ error: 'Stream not configured' }); return; }
-    const { name, members, type = 'team' } = req.body;
+    const { name, members, isPublic = true } = req.body;
     if (!name) { res.status(400).json({ error: 'Channel name required' }); return; }
     try {
-      const channelId = name.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-');
-      const allMembers = members ? [...new Set([req.userId!, ...members])] : [req.userId!];
       const client = getStreamClient();
-      const channel = client.channel(type, channelId, { name, members: allMembers, created_by_id: req.userId } as any);
+      const slug = name.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-');
+      const channelId = `${slug}-${Date.now().toString(36)}`;
+      const allMembers = members ? [...new Set([req.userId!, ...members])] : [req.userId!];
+      const channel = client.channel('team', channelId, {
+        name, members: allMembers, isPublic, created_by_id: req.userId,
+      } as any);
       await channel.create();
-      res.json({ channel: { id: channelId, name, type, members: allMembers } });
+      res.json({ channel: { id: channelId, name, type: 'team', members: allMembers, isPublic } });
     } catch (err: any) { res.status(500).json({ error: err.message || 'Failed to create channel' }); }
+  });
+
+  // List public channels (admin query — clients can't see channels they haven't joined)
+  app.get('/api/channels/public', authMiddleware, async (req: any, res) => {
+    if (!isStreamConfigured()) { res.status(503).json({ error: 'Stream not configured' }); return; }
+    try {
+      const client = getStreamClient();
+      const channels = await client.queryChannels(
+        { type: 'team' },
+        [{ last_message_at: -1 }],
+        { limit: 50 }
+      );
+      const publicChannels = channels
+        .filter((c: any) => {
+          const data = c.data as any;
+          if (!data?.isPublic) return false;
+          const memberIds = Object.keys(c.state?.members || {});
+          return !memberIds.includes(req.userId!);
+        })
+        .map((c: any) => ({
+          id: c.id,
+          name: (c.data as any)?.name || c.id,
+          memberCount: Object.keys(c.state?.members || {}).length,
+        }));
+      res.json({ channels: publicChannels });
+    } catch (err: any) { res.status(500).json({ error: err.message || 'Failed to list channels' }); }
+  });
+
+  // Join a public channel (admin adds user as member)
+  app.post('/api/channels/join', authMiddleware, async (req: any, res) => {
+    if (!isStreamConfigured()) { res.status(503).json({ error: 'Stream not configured' }); return; }
+    const { channelId } = req.body;
+    if (!channelId) { res.status(400).json({ error: 'channelId required' }); return; }
+    try {
+      const client = getStreamClient();
+      const channel = client.channel('team', channelId);
+      await channel.addMembers([req.userId!]);
+      res.json({ success: true });
+    } catch (err: any) { res.status(500).json({ error: err.message || 'Failed to join channel' }); }
   });
 
   // Sessions (proxy stubs)

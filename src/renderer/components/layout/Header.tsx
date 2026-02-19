@@ -10,6 +10,7 @@ import AgentAvatar from '../agents/AgentAvatar';
 import SessionPicker from '../agents/SessionPicker';
 import ParticipantAvatars from '../chat/ParticipantAvatars';
 import McpServerPicker from '../agents/McpServerPicker';
+import ChannelMembersPanel from '../channels/ChannelMembersPanel';
 
 const statusColors: Record<string, string> = {
   connected: '#22c55e',
@@ -35,6 +36,7 @@ export default function Header() {
   const activeSessionId = useChatStore(s => s.activeSessionId);
   const { participants, inviteUser, removeUser } = useMultiUserSession(activeSessionId);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [showMembers, setShowMembers] = useState(false);
 
   // Load agent bindings when agent changes
   useEffect(() => {
@@ -180,18 +182,33 @@ export default function Header() {
       <div style={{
         height: 52, borderBottom: '1px solid #e5e5ed', display: 'flex',
         alignItems: 'center', padding: '0 20px', gap: 12, flexShrink: 0, background: '#fff',
+        position: 'relative',
       }}>
         <span style={{ fontSize: isPrivate ? 16 : 18, fontWeight: 700, color: '#9999aa' }}>
           {isPrivate ? '🔒' : '#'}
         </span>
         <div>
           <span style={{ fontWeight: 600, fontSize: 14.5 }}>{channelName}</span>
-          <span style={{ color: '#9999aa', fontSize: 12, marginLeft: 8 }}>
-            {memberCount} member{memberCount !== 1 ? 's' : ''}
-          </span>
         </div>
 
         <div style={{ flex: 1 }} />
+
+        {/* Members button */}
+        <button
+          onClick={() => setShowMembers(!showMembers)}
+          title="Members"
+          style={{
+            padding: '5px 12px', borderRadius: 8,
+            border: showMembers ? '1px solid #6366f1' : '1px solid #e5e5ed',
+            background: showMembers ? '#ededf7' : 'transparent',
+            cursor: 'pointer', fontSize: 12, fontWeight: 500,
+            color: showMembers ? '#6366f1' : '#9999aa',
+            display: 'flex', alignItems: 'center', gap: 5,
+          }}
+        >
+          <span style={{ fontSize: 14 }}>👤</span>
+          {memberCount}
+        </button>
 
         {/* Copilot toggle */}
         <button
@@ -220,6 +237,11 @@ export default function Header() {
         >
           ⚙
         </button>
+
+        {/* Members panel */}
+        {showMembers && channel && (
+          <ChannelMembersPanel channel={channel} onClose={() => setShowMembers(false)} />
+        )}
       </div>
     );
   }

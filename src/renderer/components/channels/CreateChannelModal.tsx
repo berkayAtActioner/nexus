@@ -23,10 +23,10 @@ export default function CreateChannelModal({ onClose }: Props) {
   const handleCreate = async () => {
     if (!name.trim()) return;
     setCreating(true);
-    const channel = await createChannel(name.trim(), selectedMembers, isPublic);
+    const result = await createChannel(name.trim(), selectedMembers, isPublic);
     setCreating(false);
-    if (channel?.id) {
-      setActiveView({ type: 'channel', channelId: channel.id });
+    if (result?.id) {
+      setActiveView({ type: 'channel', channelId: result.id });
     }
     onClose();
   };

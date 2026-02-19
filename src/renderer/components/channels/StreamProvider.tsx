@@ -21,12 +21,12 @@ export default function StreamProvider({ children }: StreamProviderProps) {
     }
   }, [isAuthenticated, streamConfig?.configured, streamToken, currentUser?.id]);
 
-  // Fetch workspace users when authenticated
+  // Fetch workspace users when Stream is connected (shared user directory)
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isConnected) {
       fetchUsers().catch(() => {});
     }
-  }, [isAuthenticated]);
+  }, [isConnected]);
 
   // If Stream is connected, wrap with Chat provider
   if (client && isConnected) {
