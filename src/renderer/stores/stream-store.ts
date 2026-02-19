@@ -1,7 +1,10 @@
 import { create } from 'zustand';
-import { StreamChat, Channel } from 'stream-chat';
+import { StreamChat, Channel, Event } from 'stream-chat';
 import { initStreamClient, disconnectStreamClient, getStreamClient } from '../services/stream-client';
 import { apiFetch } from '../services/api-client';
+import { useChatStore } from './chat-store';
+import { ChatMessage } from '../../shared/types';
+import { v4 as uuidv4 } from 'uuid';
 
 interface PublicChannelInfo {
   id: string;
@@ -38,14 +41,54 @@ export const useStreamStore = create<StreamState>((set, get) => ({
       set({ client, isConnected: true });
 
       // Listen for channel events to auto-refresh the list
-      client.on('notification.added_to_channel', () => {
+      client.on('notification.added_to_channel', (event: Event) => {
         get().loadChannels();
+        // If it's an ai-session channel, reload chat sessions
+        const channelId = event.channel?.id || '';
+        if (channelId.startsWith('ai-session-')) {
+          useChatStore.getState().reloadCurrentSessions();
+        }
       });
-      client.on('notification.removed_from_channel', () => {
+      client.on('notification.removed_from_channel', (event: Event) => {
         get().loadChannels();
+        const channelId = event.channel?.id || '';
+        if (channelId.startsWith('ai-session-')) {
+          useChatStore.getState().reloadCurrentSessions();
+        }
       });
       client.on('channel.deleted', () => {
         get().loadChannels();
+      });
+
+      // Listen for new messages in ai-session channels
+      client.on('message.new', (event: Event) => {
+        const channelId = event.channel_id || event.cid?.split(':').pop() || '';
+        if (!channelId.startsWith('ai-session-')) return;
+
+        const sessionId = channelId.replace('ai-session-', '');
+        const chatStore = useChatStore.getState();
+
+        // Only process if this session is active and it's not our own message
+        if (chatStore.activeSessionId !== sessionId) return;
+        if (event.user?.id === client.userID) return;
+
+        const msg = event.message;
+        if (!msg) return;
+
+        const custom = msg as any;
+        const chatMessage: ChatMessage = {
+          id: msg.id || uuidv4(),
+          session_id: sessionId,
+          role: (custom.role || 'user') as 'user' | 'assistant' | 'system',
+          sender_name: custom.sender_name || event.user?.name || null,
+          content: msg.text || '',
+          mcp_app_data: custom.mcp_app_data || null,
+          attachments: null,
+          tool_calls: custom.tool_calls || null,
+          created_at: custom.original_created_at || msg.created_at?.toString() || new Date().toISOString(),
+        };
+
+        chatStore.addStreamMessage(sessionId, chatMessage);
       });
 
       await get().loadChannels();

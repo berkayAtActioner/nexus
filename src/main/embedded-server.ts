@@ -416,7 +416,50 @@ export function startEmbeddedServer(): void {
     } catch (err: any) { res.status(500).json({ error: err.message || 'Failed to join channel' }); }
   });
 
-  // Sessions (proxy stubs)
+  // Sessions — share/unshare via Stream
+  app.post('/api/sessions/share', authMiddleware, async (req: any, res) => {
+    if (!isStreamConfigured()) { res.status(503).json({ error: 'Stream not configured' }); return; }
+    const { sessionId, agentId, title, memberIds, messages } = req.body;
+    if (!sessionId || !agentId || !memberIds?.length) {
+      res.status(400).json({ error: 'sessionId, agentId, and memberIds are required' }); return;
+    }
+    try {
+      const client = getStreamClient();
+      const channelId = `ai-session-${sessionId}`;
+      const allMembers = [...new Set([req.userId!, ...memberIds])];
+      const channel = client.channel('messaging', channelId, {
+        name: title || 'Shared Session', members: allMembers,
+        created_by_id: req.userId!, agentId, sessionId,
+      } as any);
+      await channel.create();
+      if (messages?.length) {
+        for (const msg of messages) {
+          await channel.sendMessage({
+            text: msg.content || '', user_id: req.userId!,
+            role: msg.role || 'user', tool_calls: msg.tool_calls || '',
+            mcp_app_data: msg.mcp_app_data || '', sender_name: msg.sender_name || '',
+            original_created_at: msg.created_at || '',
+          } as any);
+        }
+      }
+      res.json({ success: true, channelId });
+    } catch (err: any) { res.status(500).json({ error: err.message || 'Failed to share session' }); }
+  });
+
+  app.post('/api/sessions/unshare', authMiddleware, async (req: any, res) => {
+    if (!isStreamConfigured()) { res.status(503).json({ error: 'Stream not configured' }); return; }
+    const { sessionId, userId } = req.body;
+    if (!sessionId || !userId) { res.status(400).json({ error: 'sessionId and userId are required' }); return; }
+    try {
+      const client = getStreamClient();
+      const channelId = `ai-session-${sessionId}`;
+      const channel = client.channel('messaging', channelId);
+      await channel.removeMembers([userId]);
+      res.json({ success: true });
+    } catch (err: any) { res.status(500).json({ error: err.message || 'Failed to unshare session' }); }
+  });
+
+  // Sessions (legacy stubs)
   app.post('/api/sessions/:id/invite', authMiddleware, (req: any, res) => {
     res.json({ success: true, sessionId: req.params.id, userId: req.body.userId, role: 'member' });
   });
